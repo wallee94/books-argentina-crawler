@@ -6,7 +6,7 @@ class ParadigmaSpider(scrapy.Spider):
     name = "paradigmalibros.com"
 
     def start_requests(self):
-        urls = ['http://www.paradigmalibros.com/sitemap_' + str(i) for i in range(0,20) + '.xml']
+        urls = ['https://www.paradigmalibros.com/sitemap_' + str(i) + '.xml' for i in range(0,20)]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
@@ -26,6 +26,7 @@ class ParadigmaSpider(scrapy.Spider):
         for loc in locs:
             url = loc.extract()
             if "bookId" in url:
+                url = url.replace("http:", "https:")
                 yield scrapy.Request(url=url, callback=self.parse_details, headers=self.details_headers)
 
     def parse_details(self, response):
@@ -33,17 +34,17 @@ class ParadigmaSpider(scrapy.Spider):
             "url": response.url,
             "title": self.clean_text(response.selector.xpath('//div[@class="detInfoP"]/h1/text()').extract_first()),
             #"content": self.clean_text(response.selector.xpath('//div/p[@itemprop="description"]/text()').extract_first()),
-            "author": self.clean_text(response.selector.xpath("//div/span/p/a/text()").extract_first()),
-            "editorial": self.clean_text(response.selector.xpath('//p[contains(text(),"Editorial"")]/a/text()').extract_first()),
+            "author": self.clean_text(response.selector.xpath("//div/span/p/a[@href]/text()").extract_first()),
+            "editorial": self.clean_text(response.selector.xpath('//p[contains(text(),"Editorial")]/a[@title]/text()').extract_first()),
             "price": self.clean_price(response.selector.xpath('//div/p[@style]/text()').extract_first()),
-            "ISBN": self.clean_price(response.selector.xpath('//p/span/text()').extract_first())
+            "ISBN": self.clean_text(response.selector.xpath('//p/span/text()').extract_first().split(":")[-1].strip())
         }
 
         yield data
 
     def clean_text(self, text):
         if not isinstance(text, str):
-            return ""
+            return "asd"
         text = re.sub("[\n\t]+", "", text)
         text = re.sub("\s+", " ", text)
         return text
