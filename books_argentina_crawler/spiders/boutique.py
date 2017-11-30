@@ -25,9 +25,9 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
 
         for loc in locs:
             url = loc.extract()
-            print(url)
             url = url.replace("http:", "https:")
-            yield scrapy.Request(url=url, callback=self.parse_details, headers=self.details_headers)
+            if "resultados.aspx" not in url:
+                yield scrapy.Request(url=url, callback=self.parse_details, headers=self.details_headers)
 
     def parse_details(self, response):
         data = {
@@ -37,8 +37,13 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
             "author": self.clean_text(response.selector.xpath("//p/span/a[@href]/text()").extract_first()),
             "editorial": self.clean_text(response.selector.xpath('//li/span/a[@href]/text()').extract_first()),
             "price_arg": self.clean_price(response.selector.xpath('//div/p/span[@class]/text()').extract_first()),
-            "ISBN": self.clean_text(response.selector.xpath('//li/span[@itemprop="isbn"]/text()').extract_first().split(":")[-1].strip())
+            "ISBN": self.clean_isbn(response.selector.xpath('//li/span[@itemprop="isbn"]/text()').extract_first())
         }
+
+        if data["ISBN"]:
+            data["ISBN"] = data["ISBN"].split(":")[-1].strip()
+        else:
+            return
 
         yield data
 
@@ -50,9 +55,15 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
         text = re.sub("\s+", " ", text)
         return text
 
+    def clean_isbn(self, text):
+        if not isinstance(text, str):
+            return ""
+        return re.sub(r"[^\d]", "", text)
+
     def clean_price(self, price):
         if not isinstance(price, str):
             return "-1"
+        price = re.sub(r",", ".", price)
         res = ""
         for c in price:
             if c.isdigit() or c == ".":
