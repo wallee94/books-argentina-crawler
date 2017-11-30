@@ -37,10 +37,12 @@ class ParadigmaSpider(scrapy.Spider):
             "content": "",
             "author": self.clean_text(response.selector.xpath("//div/span/p/a[@href]/text()").extract_first()),
             "editorial": self.clean_text(response.selector.xpath('//p[contains(text(),"Editorial")]/a[@title]/text()').extract_first()),
-            "ISBN": self.clean_text(response.selector.xpath('//p/span/text()').extract_first().split(":")[-1].strip())
+            "ISBN": self.clean_isbn(response.selector.xpath('//p/span/text()').extract_first().split(":")[-1].strip())
         }
 
-        price = self.clean_price(response.selector.xpath('//div/p[@style]/text()').extract_first()),
+        price = response.selector.xpath('//div/p[@style]/text()').extract_first()
+        if price is None:
+            return
         price_arg, price_usd = price.split("||")
 
         data["price_arg"] = self.clean_price(price_arg)
@@ -48,8 +50,12 @@ class ParadigmaSpider(scrapy.Spider):
 
         yield data
 
+    def clean_isbn(self, text):
+        if not isinstance(text, str):
+            return ""
+        return re.sub(r"[^\d]", "", text)
+
     def clean_text(self, text):
-        print(text)
         if not isinstance(text, str):
             return ""
         text = re.sub("[\n\t]+", "", text)
