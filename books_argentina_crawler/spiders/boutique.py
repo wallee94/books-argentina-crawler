@@ -30,6 +30,11 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
                 yield scrapy.Request(url=url, callback=self.parse_details, headers=self.details_headers)
 
     def parse_details(self, response):
+        # we don't want ebooks
+        format = response.selector.xpath("//h3/span/text()").extract_first()
+        if format and format.strip().lower() == "libro digital":
+            return
+
         data = {
             "url": response.url,
             "title": self.clean_text(response.selector.xpath('//div/h1/a[@href]/text()').extract_first()),
@@ -62,9 +67,8 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
     def clean_price(self, price):
         if not isinstance(price, str):
             return "-1"
-        price = re.sub(r",", ".", price)
-        res = ""
-        for c in price:
-            if c.isdigit() or c == ".":
-                res += c
-        return res
+        cents = price.split(",")[-1]
+        price = re.sub(r"[^\d]", "", price)
+        price = price[:-2] + "." + cents
+
+        return price
