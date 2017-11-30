@@ -48,7 +48,6 @@ class BoutiqueDelLibroSpider(scrapy.Spider):
         yield data
 
     def clean_text(self, text):
-        print(text)
         if not isinstance(text, str):
             return ""
         text = re.sub("[\n\t]+", "", text)
